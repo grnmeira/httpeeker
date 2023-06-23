@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 hudsucker = { version = "0.20.0", features = ["openssl-ca"] }
+tokio = { version = "1.28.2", features = ["macros", "rt-multi-thread", "signal"] }
