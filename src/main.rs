@@ -9,7 +9,6 @@ use hudsucker::{
 };
 use std::net::SocketAddr;
 use pipeline::{Pipeline, Processor, ProcessorResult};
-use std::sync::Arc;
 
 pub mod pipeline;
 
@@ -51,9 +50,7 @@ async fn main() {
     let processors: Vec<Box<dyn Processor + Sync + Send>> =
         vec![Box::new(Filter), Box::new(Logger)];
 
-    let processors = Arc::new(processors);
-
-    let pipeline = Pipeline { processors };
+    let pipeline = Pipeline::new(processors, vec![]);
 
     let proxy = Proxy::builder()
         .with_addr(SocketAddr::from(([127, 0, 0, 1], 3000)))

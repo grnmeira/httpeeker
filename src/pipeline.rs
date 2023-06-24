@@ -16,7 +16,20 @@ pub trait Processor {
 
 #[derive(Clone)]
 pub struct Pipeline {
-    pub processors: Arc<Vec<Box<dyn Processor + Send + Sync>>>,
+    outbound_processors: Arc<Vec<Box<dyn Processor + Send + Sync>>>,
+    inbound_processors: Arc<Vec<Box<dyn Processor + Send + Sync>>>
+}
+
+impl Pipeline {
+    pub fn new(
+        inbound_processors: Vec<Box<dyn Processor + Send + Sync>>, 
+        outbound_processors: Vec<Box<dyn Processor + Send + Sync>>
+    ) -> Pipeline {
+        Pipeline { 
+            inbound_processors: Arc::new(inbound_processors), 
+            outbound_processors: Arc::new(outbound_processors)
+        }
+    }
 }
 
 #[async_trait]
@@ -26,7 +39,7 @@ impl HttpHandler for Pipeline {
         _ctx: &HttpContext,
         mut req: Request<Body>,
     ) -> RequestOrResponse {
-        for p in self.processors.iter() {
+        for p in self.outbound_processors.iter() {
             let result = p.process(req);
             req = match result {
                 ProcessorResult::Continue(req) => req,
@@ -36,5 +49,21 @@ impl HttpHandler for Pipeline {
             }
         }
         req.into()
+    }
+
+    async fn handle_response(
+        &mut self,
+        _ctx: &HttpContext,
+        mut res: Response<Body>,
+    ) -> Response<Body> {
+        res
+    }
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn creating_basic_pipeline() {
+        assert_eq!(true, true);
     }
 }
