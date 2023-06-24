@@ -8,45 +8,15 @@ use hudsucker::{
     *,
 };
 use std::net::SocketAddr;
+use pipeline::{Pipeline, Processor, ProcessorResult};
 use std::sync::Arc;
+
+pub mod pipeline;
 
 async fn shutdown_signal() {
     tokio::signal::ctrl_c()
         .await
         .expect("Failed to install CTRL+C signal handler");
-}
-
-enum ProcessorResult {
-    Continue(Request<Body>),
-    Break(Request<Body>),
-}
-trait Processor {
-    fn process(&self, req: Request<Body>) -> ProcessorResult;
-}
-
-#[derive(Clone)]
-struct Pipeline {
-    processors: Arc<Vec<Box<dyn Processor + Send + Sync>>>,
-}
-
-#[async_trait]
-impl HttpHandler for Pipeline {
-    async fn handle_request(
-        &mut self,
-        _ctx: &HttpContext,
-        mut req: Request<Body>,
-    ) -> RequestOrResponse {
-        for p in self.processors.iter() {
-            let result = p.process(req);
-            req = match result {
-                ProcessorResult::Continue(req) => req,
-                ProcessorResult::Break(req) => {
-                    return req.into();
-                }
-            }
-        }
-        req.into()
-    }
 }
 
 struct Filter;
