@@ -7,8 +7,8 @@ use hudsucker::{
     tokio_tungstenite::tungstenite::Message,
     *,
 };
+use pipeline::{Filter, Logger, OutboundProcessor, Pipeline};
 use std::net::SocketAddr;
-use pipeline::{Pipeline, Processor, ProcessorResult};
 
 pub mod pipeline;
 
@@ -16,25 +16,6 @@ async fn shutdown_signal() {
     tokio::signal::ctrl_c()
         .await
         .expect("Failed to install CTRL+C signal handler");
-}
-
-struct Filter;
-struct Logger;
-
-impl Processor for Filter {
-    fn process(&self, req: Request<Body>) -> ProcessorResult {
-        if req.uri().to_string().contains("google") {
-            return ProcessorResult::Continue(req);
-        }
-        ProcessorResult::Break(req)
-    }
-}
-
-impl Processor for Logger {
-    fn process(&self, req: Request<Body>) -> ProcessorResult {
-        println!("{}", req.uri().to_string());
-        ProcessorResult::Continue(req)
-    }
 }
 
 #[tokio::main]
@@ -47,8 +28,12 @@ async fn main() {
 
     let ca = OpensslAuthority::new(private_key, ca_cert, MessageDigest::sha256(), 1_000);
 
-    let processors: Vec<Box<dyn Processor + Sync + Send>> =
-        vec![Box::new(Filter), Box::new(Logger)];
+    let processors: Vec<Box<dyn OutboundProcessor + Sync + Send>> = vec![
+        Box::new(Filter {
+            filter_string: "google.com".to_string(),
+        }),
+        Box::new(Logger),
+    ];
 
     let pipeline = Pipeline::new(processors, vec![]);
 
